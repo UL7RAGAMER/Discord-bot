@@ -1,0 +1,6 @@
+requests
+flask
+discord.py
+gitpython
+google-api-python-client
+openai
