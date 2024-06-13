@@ -51,9 +51,7 @@ model = genai.GenerativeModel(
 }
 )  
 
-files = [
-    upload_to_gemini("C:/Users/siddk/Downloads/lemh105.pdf", mime_type="application/pdf"),
-]
+files = []
 
 intents = discord.Intents.default()
 intents.messages = True  # Enable message intent to handle DMs
