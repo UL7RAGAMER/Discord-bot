@@ -7,6 +7,9 @@ import google.generativeai as genai
 import time
 import history
 import google.generativeai.types as gen
+from PIL import Image
+import pytesseract
+import io
 
 # Set the path to the Git executable
 
@@ -40,7 +43,7 @@ generation_config = {
 }
 
 model = genai.GenerativeModel(
-    model_name="gemini-1.5-pro",
+    model_name="gemini-1.5-flash",
     generation_config=generation_config,
     system_instruction=history.system_instruction,
     safety_settings = {
@@ -51,9 +54,7 @@ model = genai.GenerativeModel(
 }
 )  
 
-files = [
-    upload_to_gemini("C:/Users/siddk/Downloads/lemh105.pdf", mime_type="application/pdf"),
-]
+files = []
 
 intents = discord.Intents.default()
 intents.messages = True  # Enable message intent to handle DMs
@@ -100,12 +101,17 @@ async def bard(interaction: discord.Interaction, prompt: str = None, attachment:
     try:
         await interaction.response.defer()
 
-        if attachment and attachment.filename.endswith('.txt'):
-            prompt = await attachment.read()
-            prompt = prompt.decode('utf-8')
+        if attachment:
+            if attachment.filename.endswith('.txt'):
+                prompt = await attachment.read()
+                prompt = prompt.decode('utf-8')
+            elif attachment.content_type.startswith('image/'):
+                image_data = await attachment.read()
+                image = Image.open(io.BytesIO(image_data))
+                prompt = pytesseract.image_to_string(image)
 
         if not prompt:
-            await interaction.followup.send("Please provide a prompt or attach a .txt file.")
+            await interaction.followup.send("Please provide a prompt or attach a .txt or image file.")
             return
 
         user_id = str(interaction.user.id)
@@ -130,16 +136,24 @@ async def bard(interaction: discord.Interaction, prompt: str = None, attachment:
         await interaction.followup.send(f"An error occurred: {e}")
 
 @bot.event
-async def on_message(message):
+async def on_message(message: discord.Message):
     if message.author == bot.user:
         return
 
     if isinstance(message.channel, discord.DMChannel):
-        if message.attachments and message.attachments[0].filename.endswith('.txt'):
+        if message.attachments:
             try:
-                file = message.attachments[0]
-                prompt = await file.read()
-                prompt = prompt.decode('utf-8')
+                attachment = message.attachments[0]
+                if attachment.filename.endswith('.txt'):
+                    prompt = await attachment.read()
+                    prompt = prompt.decode('utf-8')
+                elif attachment.content_type.startswith('image/'):
+                    image_data = await attachment.read()
+                    image = Image.open(io.BytesIO(image_data))
+                    prompt = pytesseract.image_to_string(image)
+                else:
+                    await message.channel.send("Unsupported attachment type. Please attach a .txt or image file.")
+                    return
             except Exception as e:
                 await message.channel.send(f"An error occurred while reading the file: {e}")
                 return
@@ -151,7 +165,7 @@ async def on_message(message):
             if user_id not in conversation_history:
                 conversation_history[user_id] = []
 
-            user_history = conversation_history[user_id]
+            user_history : list = conversation_history[user_id] 
             user_history.append({"role": "user", "parts": [prompt]})
             chat_session = model.start_chat(history=user_history + history.history)
             response = chat_session.send_message(prompt)
