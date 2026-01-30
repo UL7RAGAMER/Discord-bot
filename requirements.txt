@@ -1,8 +1,8 @@
-requests
-flask
 discord.py
+flask
 gitpython
-google-api-python-client
-openai
-uvicorn
 google-generativeai
+Pillow
+pytesseract
+python-dotenv
+requests

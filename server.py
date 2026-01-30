@@ -1,14 +1,23 @@
-import flask
-import os
-from flask import send_from_directory
+from flask import Flask
+from threading import Thread
 
-app = flask.Flask(__name__)
+app = Flask(__name__)
 
 @app.route('/')
-@app.route('/home')
 def home():
-    pass
+    return "Bot is alive!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    """
+    Starts the Flask server in a separate thread.
+    Useful for keeping the bot alive on services like Replit.
+    """
+    t = Thread(target=run)
+    t.start()
+
 if __name__ == "__main__":
-    app.secret_key = 'ItIsASecret'
-    app.debug = True
-    app.run()
+    # If run directly, start the server
+    run()
